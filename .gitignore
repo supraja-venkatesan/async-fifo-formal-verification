@@ -1,0 +1,7 @@
+*.vcd
+*.fst
+*.vvp
+__pycache__/
+*_bmc/
+*_prove/
+*_cover/
