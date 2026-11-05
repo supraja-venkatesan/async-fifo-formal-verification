@@ -1,0 +1,15 @@
+[options]
+mode bmc
+depth 30
+
+[engines]
+smtbmc
+
+[script]
+read -formal sync_fifo.sv
+read -formal fifo_formal.sv
+prep -top fifo_formal
+
+[files]
+sync_fifo.sv ../mutants/mut01_no_full_guard.sv
+fifo_formal.sv
