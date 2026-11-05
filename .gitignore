@@ -5,3 +5,4 @@ __pycache__/
 *_bmc/
 *_prove/
 *_cover/
+status.sqlite
