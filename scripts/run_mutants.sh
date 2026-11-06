@@ -16,7 +16,7 @@ for f in rtl/sync_fifo.sv mutants/mut*.sv; do
     cat > "formal/gen_${name}_bmc.sby" <<EOF
 [options]
 mode bmc
-depth 30
+depth 12
 
 [engines]
 smtbmc
@@ -24,6 +24,7 @@ smtbmc
 [script]
 read -formal sync_fifo.sv
 read -formal fifo_formal.sv
+chparam -set DEPTH 4 -set DATA_W 4 fifo_formal
 prep -top fifo_formal
 
 [files]

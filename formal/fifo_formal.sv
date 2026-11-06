@@ -55,4 +55,39 @@ module fifo_formal #(
         cover(f_past_valid && full);
         cover(f_past_valid && was_full && empty);   // filled up, then fully drained
     end
+
+
+    // ---- data integrity: follow ONE accepted write through the FIFO ----
+    (* anyconst *) wire [5:0] f_tag;       // solver picks which accepted write to follow
+    reg [5:0]        f_wr_cnt = 0;         // accepted writes so far
+    reg [5:0]        f_rd_cnt = 0;         // accepted reads so far
+    reg [DATA_W-1:0] f_tag_data;           // data of the tagged write
+    reg              f_chk = 0;            // 1 in the cycle when rd_data must be checked
+
+    wire f_wr_acc = rst_n && wr_en && !full;
+    wire f_rd_acc = rst_n && rd_en && !empty;
+
+    always @(posedge clk) begin
+        f_chk <= 0;
+        if (!rst_n) begin
+            f_wr_cnt <= 0;
+            f_rd_cnt <= 0;
+        end else begin
+            if (f_wr_acc) begin
+                f_wr_cnt <= f_wr_cnt + 1;
+                if (f_wr_cnt == f_tag) f_tag_data <= wr_data;
+            end
+            if (f_rd_acc) begin
+                f_rd_cnt <= f_rd_cnt + 1;
+                if (f_rd_cnt == f_tag) f_chk <= 1;
+            end
+        end
+    end
+
+    always @(posedge clk) if (f_past_valid && f_chk)
+        assert(rd_data == f_tag_data);     // Property 4: tagged item comes out unchanged
+
+    // cover: the data check is actually reachable (guards against a vacuous Property 4)
+    always @(posedge clk) cover(f_past_valid && f_chk);
+
 endmodule
