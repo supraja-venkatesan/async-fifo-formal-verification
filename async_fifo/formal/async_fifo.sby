@@ -1,0 +1,22 @@
+[tasks]
+bmc
+cover
+
+[options]
+bmc: mode bmc
+cover: mode cover
+multiclock on
+depth 20
+
+[engines]
+smtbmc
+
+[script]
+read -formal async_fifo.sv
+read -formal async_fifo_formal.sv
+chparam -set DEPTH 4 -set DATA_W 4 async_fifo_formal
+prep -top async_fifo_formal
+
+[files]
+../rtl/async_fifo.sv
+async_fifo_formal.sv
