@@ -56,5 +56,10 @@ module async_fifo_formal #(
     always @(posedge rclk) if (rvalid && f_chk)
         assert(rdata == f_tag_data);       // the tagged word comes out unchanged
 
-    always @(posedge rclk) cover(rvalid && f_chk);   
+    always @(posedge rclk) cover(rvalid && f_chk); 
+
+
+    wire [5:0] f_occ = f_wr_cnt - f_rd_cnt;
+    always @* if (wvalid && rvalid) assert(f_occ <= DEPTH);
+    always @* cover(wvalid && rvalid && f_occ == DEPTH);   // full occupancy is reachable     
 endmodule
