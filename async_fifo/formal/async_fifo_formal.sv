@@ -61,5 +61,10 @@ module async_fifo_formal #(
 
     wire [5:0] f_occ = f_wr_cnt - f_rd_cnt;
     always @* if (wvalid && rvalid) assert(f_occ <= DEPTH);
-    always @* cover(wvalid && rvalid && f_occ == DEPTH);   // full occupancy is reachable     
+    always @* cover(wvalid && rvalid && f_occ == DEPTH);   // full occupancy is reachable  
+
+    always @(posedge rclk) cover(rvalid && f_chk);
+
+    // ... your occupancy assert and cover ...
+       
 endmodule
