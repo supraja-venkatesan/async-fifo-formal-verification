@@ -8,3 +8,4 @@ __pycache__/
 status.sqlite
 **/formal/gen_*.sby
 obj_dir/
+obj_*/
