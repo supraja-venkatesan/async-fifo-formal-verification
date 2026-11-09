@@ -2,7 +2,7 @@
 
 # Formal Verification of a CDC Async FIFO, with Mutation Scoring
 
-This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in two ways: via a directed simulation testbench, and through formal veriification using SymbiYosys. The checks are scored by testing **mutants**: where nine deliberate RTL bugs get injected and each method is graded on whether or not it manages to catch them. 
+This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in two ways: via a directed simulation testbench, a constrained random UVM testbench, and through formal verification using SymbiYosys. The checks are scored by testing **mutants**: where nine deliberate RTL bugs get injected and each method is graded on whether or not it manages to catch them. 
 
 ## Design
 
@@ -20,26 +20,30 @@ This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in
 - **Cover points:** full, data-check reached, and full occupancy reached. These show the assertions are not passing vacuously.
 - **Environment constraint:** asynchronous resets are assumed to stay released at every solver step after a domain's first clock edge. Without this, the solver can pulse a reset between clock edges, which caused a false failure early in development.
 
+
 ## Results: mutation kill table
 
-| Mutant | Bug | Simulation | Formal |
-|---|---|---|---|
-| mut01 | `wfull` compares only the top pointer bit | CAUGHT | CAUGHT |
-| mut02 | `rempty` resets to 0 | missed | CAUGHT |
-| mut03 | write accepted while full | CAUGHT | CAUGHT |
-| mut04 | read accepted while empty | missed | CAUGHT |
-| mut05 | stored data corrupted | CAUGHT | CAUGHT |
-| mut06 | synchronizer reduced to a single stage | missed | missed |
-| mut07 | `wfull` compares the stale write pointer | missed | CAUGHT |
-| mut08 | write binary pointer not reset | CAUGHT | CAUGHT |
-| mut09 | read address taken from the gray pointer | CAUGHT | CAUGHT |
+| Mutant | Bug | Directed sim | UVM random | Formal |
+|---|---|---|---|---|
+| mut01 | `wfull` compares only the top pointer bit | CAUGHT | CAUGHT | CAUGHT |
+| mut02 | `rempty` resets to 0 | missed | missed | CAUGHT |
+| mut03 | write accepted while full | CAUGHT | CAUGHT | CAUGHT |
+| mut04 | read accepted while empty | missed | CAUGHT | CAUGHT |
+| mut05 | stored data corrupted | CAUGHT | CAUGHT | CAUGHT |
+| mut06 | synchronizer reduced to a single stage | missed | missed | missed |
+| mut07 | `wfull` compares the stale write pointer | missed | CAUGHT | CAUGHT |
+| mut08 | write binary pointer not reset | CAUGHT | missed | CAUGHT |
+| mut09 | read address taken from the gray pointer | CAUGHT | CAUGHT | CAUGHT |
+| | **Bugs caught** | **5 / 9** | **6 / 9** | **8 / 9** |
 
-The unmodified design passes both methods (no false alarms). **Formal killed 8 of 9; the directed testbench killed 5 of 9.**
+The unmodified design passes all three methods (no false alarms).
 
 Notes:
-- The simulation side is a directed testbench with 13 checks and an idle cycle between operations. It is not a constrained-random or UVM comparison.
-- mut08 is caught in simulation partly because an unreset register is `X` in simulation.
-- **mut06 is missed by both methods.** Both tools sample signals atomically and do not model metastability, so removing a synchronizer stage only changes latency. Bugs of this class need a structural CDC check or gate-level simulation.
+- **Random stimulus found what the directed test missed.** The UVM test forces reads on an empty FIFO and back-to-back writes, which is why it catches mut04 and mut07.
+- **mut08 looks like a simulator artifact, not a testbench weakness.** The directed testbench runs on Icarus, where an unreset register starts as `X` and trips the checks. UVM runs on Verilator, which is 2-state, so the same register starts at 0. Formal catches it either way. I have not confirmed this by experiment yet.
+- **mut02 is missed by both simulations.** The testbenches only start driving after reset is released, so the first cycle after reset is never stressed. Formal can start from any state.
+- **mut06 is missed by all three.** None of these tools models metastability, so removing a synchronizer stage only changes latency. Bugs of this class need a structural CDC check or gate-level simulation.
+- The directed testbench has 13 checks and an idle cycle between operations. The UVM run is a single random seed on the default 8-deep, 8-bit instance, with random idle gaps as the only randomization, so a "missed" on a subtle bug could be bad luck. Formal runs on a smaller instance (below), so the comparison is not perfectly like for like.
 
 ## Bounds and limitations
 
@@ -72,5 +76,13 @@ sby -f async_fifo.sby cover
 
 ```
 async_fifo/            RTL, testbench, formal wrapper, mutants, scripts
+uvm/                   constrained-random UVM testbench (Verilator) and its mutant runner
 baseline_sync_fifo/    the single-clock warm-up, with its own mutant and scripts
+
+
+# UVM testbench (needs Verilator and the Accellera UVM 2017 sources; a full run takes about an hour)
+export UVM_HOME=/path/to/1800.2-2017-1.0/src
+cd ../uvm
+./run_uvm_mutants.sh
+
 ```
