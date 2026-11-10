@@ -1,12 +1,11 @@
-# async-fifo-formal-verification
-
 # Formal Verification of a CDC Async FIFO, with Mutation Scoring
 
-This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in two ways: via a directed simulation testbench, a constrained random UVM testbench, and through formal verification using SymbiYosys. The checks are scored by testing **mutants**: where nine deliberate RTL bugs get injected and each method is graded on whether or not it manages to catch them. 
+This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked three ways: a directed simulation testbench, a constrained-random UVM testbench, and formal verification with SymbiYosys. The checks are scored with **mutants**: nine deliberate RTL bugs are injected, and each method is graded on whether it catches them.
 
 ## Design
 
 `async_fifo/rtl/async_fifo.sv`
+
 - Separate write and read clocks, with asynchronous active-low resets
 - Gray-coded pointers (AW+1 bits), each crossing the clock boundary through a 2-flop synchronizer
 - `wfull` is computed in the write domain and `rempty` in the read domain, both registered
@@ -15,11 +14,11 @@ This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in
 ## Formal properties
 
 `async_fifo/formal/async_fifo_formal.sv` (multi-clock, with both clocks free for the solver to drive)
+
 - **Data integrity (symbolic tag):** the solver picks an arbitrary write and the wrapper follows it through the crossing. The word read out must equal the word written.
 - **Occupancy:** accepted writes minus accepted reads always stays within 0..DEPTH, which covers overflow and underflow.
 - **Cover points:** full, data-check reached, and full occupancy reached. These show the assertions are not passing vacuously.
 - **Environment constraint:** asynchronous resets are assumed to stay released at every solver step after a domain's first clock edge. Without this, the solver can pulse a reset between clock edges, which caused a false failure early in development.
-
 
 ## Results: mutation kill table
 
@@ -39,12 +38,12 @@ This is a dual-clock (asynchronous) FIFO written in SystemVerilog and checked in
 The unmodified design passes all three methods (no false alarms).
 
 Notes:
+
 - **Random stimulus found what the directed test missed.** The UVM test forces reads on an empty FIFO and back-to-back writes, which is why it catches mut04 and mut07.
 - **mut08 looks like a simulator artifact, not a testbench weakness.** The directed testbench runs on Icarus, where an unreset register starts as `X` and trips the checks. UVM runs on Verilator, which is 2-state, so the same register starts at 0. Formal catches it either way. I have not confirmed this by experiment yet.
 - **mut02 is missed by both simulations.** The testbenches only start driving after reset is released, so the first cycle after reset is never stressed. Formal can start from any state.
 - **mut06 is missed by all three.** None of these tools models metastability, so removing a synchronizer stage only changes latency. Bugs of this class need a structural CDC check or gate-level simulation.
 - The directed testbench has 13 checks and an idle cycle between operations. The UVM run is a single random seed on the default 8-deep, 8-bit instance, with random idle gaps as the only randomization, so a "missed" on a subtle bug could be bad luck. Formal runs on a smaller instance (below), so the comparison is not perfectly like for like.
-
 
 ## Bounds and limitations
 
@@ -58,7 +57,7 @@ Notes:
 
 ## Reproduce
 
-Tools: OSS CAD Suite (Yosys, SymbiYosys, Yices, Icarus Verilog)
+Tools: OSS CAD Suite (Yosys, SymbiYosys, Yices, Icarus Verilog), plus Verilator for the UVM run.
 
 ```bash
 cd async_fifo
@@ -71,6 +70,11 @@ iverilog -g2012 -o sim/tb.vvp rtl/async_fifo.sv sim/tb_async_fifo.sv && vvp sim/
 cd formal
 sby -f async_fifo.sby bmc
 sby -f async_fifo.sby cover
+
+# UVM testbench (needs Verilator and the Accellera UVM 2017 sources; a full run takes about an hour)
+export UVM_HOME=/path/to/1800.2-2017-1.0/src
+cd ../../uvm
+./run_uvm_mutants.sh
 ```
 
 ## Layout
@@ -79,11 +83,4 @@ sby -f async_fifo.sby cover
 async_fifo/            RTL, testbench, formal wrapper, mutants, scripts
 uvm/                   constrained-random UVM testbench (Verilator) and its mutant runner
 baseline_sync_fifo/    the single-clock warm-up, with its own mutant and scripts
-
-
-# UVM testbench (needs Verilator and the Accellera UVM 2017 sources; a full run takes about an hour)
-export UVM_HOME=/path/to/1800.2-2017-1.0/src
-cd ../uvm
-./run_uvm_mutants.sh
-
-```
+```c
