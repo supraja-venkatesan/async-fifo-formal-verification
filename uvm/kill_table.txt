@@ -1,0 +1,15 @@
+design                             uvm     
+------                             ---     
+async_fifo                         missed  
+mut01_wfull_top_bit_only           CAUGHT  
+mut02_rempty_reset_zero            missed  
+mut03_write_when_full              CAUGHT  
+mut04_read_when_empty              CAUGHT  
+mut05_corrupt_data                 CAUGHT  
+mut06_single_flop_sync             missed  
+design                             uvm     
+------                             ---     
+mut06_single_flop_sync             missed  
+mut07_wfull_stale_pointer          CAUGHT  
+mut08_wbin_no_reset                missed  
+mut09_read_addr_from_gray          CAUGHT  

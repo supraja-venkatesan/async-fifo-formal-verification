@@ -9,4 +9,3 @@ status.sqlite
 **/formal/gen_*.sby
 obj_dir/
 obj_*/
-ai_loop/work_*/

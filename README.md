@@ -45,18 +45,6 @@ Notes:
 - **mut06 is missed by all three.** None of these tools models metastability, so removing a synchronizer stage only changes latency. Bugs of this class need a structural CDC check or gate-level simulation.
 - The directed testbench has 13 checks and an idle cycle between operations. The UVM run is a single random seed on the default 8-deep, 8-bit instance, with random idle gaps as the only randomization, so a "missed" on a subtle bug could be bad luck. Formal runs on a smaller instance (below), so the comparison is not perfectly like for like.
 
-## Experiment: LLM-written assertions
-
-I gave an LLM a plain-English spec of the FIFO (`ai_loop/spec.md`) and graded what it wrote with the same formal setup. Each assertion is checked on the correct design (no false alarms), its cover points are checked (not vacuous), and then it is run against all nine mutants. Generated code is never hand-fixed.
-
-| Prompt | Result |
-|---|---|
-| A: naive | Did not parse. It used concurrent SVA (`assert property`, `default clocking`), which Yosys does not support. |
-| B: told the tool's limits | 3 assertions, 0 useful. Two are tautologies that can never fail (0 of 9 mutants caught). The third fails on the correct design. |
-
-The third failure came from my spec: I wrote "`wfull` and `rempty` are never both high", which is true for a single-clock FIFO but not for an async one with synchronizer lag. The model turned a wrong spec sentence into a wrong assertion. By comparison, my two hand-written properties catch 8 of 9.
-
-This is one model and one sample per prompt, so it shows what the grading harness can measure, not how good LLMs are in general.
 
 ## Bounds and limitations
 
